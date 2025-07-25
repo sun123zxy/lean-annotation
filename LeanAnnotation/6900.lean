@@ -5,7 +5,7 @@ Let $p$ be an odd prime and $t$ a positive integer.
 Suppose $r$ is an even integer that is a primitive root modulo $p^t$.
 Prove that $r + p^t$ is a primitive root modulo $2p^t$.
 
-Our strategy is as follows:
+Our proof goes as follows:
 
 - Show that $\varphi(p^t) = \varphi(2 p^t)$.
 
@@ -32,60 +32,80 @@ Our strategy is as follows:
 -/
 
 open Nat
-    
+
+/--
+If $r$ is an even primitive root modulo $p^t$ where $p$ is odd prime,
+then $r + p^t$ is a primitive root modulo $2 p^t$.
+-/
 theorem rpt_primitive_root (p : ℕ) (t : ℕ) (r : ℤ)
     (hp : Nat.Prime p)
     (hp_odd : Odd p)
-    (ht : 0 < t)
     (hr_even : Even r)
     (hr_prim : orderOf (r : ZMod (p ^ t)) = φ (p ^ t)) :
     orderOf (r + p ^ t : ZMod (2 * p ^ t)) = φ (2 * p ^ t) := by
 
+  haveI : Nat.Prime 2 := by decide
   haveI : Fact (Nat.Prime p) := ⟨hp⟩
-
+  haveI : Odd (p ^ t) := Odd.pow hp_odd
+  -- Since $r$ is even and $p^t$ is odd, $r + p^t$ is odd
+  have odd_rpt : Odd (r + p ^ t) := by
+    rw [add_comm]
+    refine Odd.add_even ?_ hr_even
+    norm_cast
+  -- $\varphi(2p^t) = \varphi(p^t)$ since $\gcd(2, p^t) = 1$
   have totient_eq : φ (2 * p ^ t) = φ (p ^ t) := by
-    sorry
-
-  haveI : IsUnit (r : ZMod (p ^ t)) := by
+    rw [Nat.totient_mul]
+    · simp only [totient_two, one_mul]
+    · apply Nat.Prime.coprime_pow_of_not_dvd
+      · assumption
+      · intro h
+        haveI := le_of_dvd (by decide) h
+        haveI := Nat.Prime.one_lt hp
+        haveI : p = 2 := by linarith
+        rw [this] at hp_odd
+        absurd hp_odd
+        simp
+  -- $r$ is a unit in $\mathbb{Z}/p^t\mathbb{Z}$ since it's a primitive root
+  have isUnit_r : IsUnit (r : ZMod (p ^ t)) := by
     apply IsOfFinOrder.isUnit
     rw [← orderOf_pos_iff]
     rw [hr_prim]
     exact pos_of_neZero (φ (p ^ t))
-  obtain ⟨ur, h_ur⟩ := this
+  let ⟨ur, h_ur⟩ := isUnit_r
   rw [← h_ur, orderOf_units] at hr_prim
 
-  haveI : IsUnit (r + p ^ t : ZMod (2 * p ^ t)) := by
-    suffices h : Int.gcd (r + p ^ t) (2 * p ^ t) = 1 by
-      sorry
-    -- rw [ZMod.isUnit_iff_coprime]
-    -- rw [coprime_iff_gcd_eq_one]
-    -- lift p to PNat using pos_of_neZero p
-    -- norm_cast
-    -- rw [← PNat.gcd_coe]
-    -- #check PNat.gcd
-    -- #check PNat.Coprime.gcd_mul
-    -- rw [PNat.Coprime.gcd_mul]
-    -- show that gcd(p^t, r+p^t) = 1
+  -- Next we show that $r + p^t$ is a unit in $\mathbb{Z}/2p^t\mathbb{Z}$
+  have isUnit_rpt : IsUnit (r + p ^ t : ZMod (2 * p ^ t)) := by
+    norm_cast
+    -- This is equivalent to $\gcd(r+p^t,2p^t)=1$
+    rw [ZMod.coe_int_isUnit_iff_isCoprime]
+    rw [Int.isCoprime_iff_gcd_eq_one]
+    -- Apply the fact that $r+p^t$ is odd to reduce to show that $\gcd(r+p^t, p^t) = 1$
     rw [Int.gcd_eq_iff]
-    simp
+    simp only [cast_one, cast_mul, cast_ofNat, cast_pow, isUnit_one, IsUnit.dvd, true_and]
     intro c hc1 hc2
-    replace hc2 : c ∣ p ^ t := by
-      
-      sorry
-    haveI : Int.gcd (r + p ^ t) (p ^ t) = 1 := by
+    have odd_c : Odd c := by
+      rcases hc2 with ⟨d, hd⟩
+      rw [hd, Int.odd_mul] at odd_rpt
+      exact odd_rpt.left
+    replace hc1 : c ∣ p ^ t := by
+      apply Int.dvd_of_dvd_mul_right_of_gcd_one hc1
+      rcases odd_c with ⟨c', hc'⟩
+      rw [hc']
       simp
-      rw [← Int.isCoprime_iff_gcd_eq_one]
-      
-      sorry
+    -- Which follows from the fact we've shown previously that $r$ is a unit modulo $p^t$
+    haveI : Int.gcd (r + p ^ t) (p ^ t) = 1 := by
+      simp only [Int.gcd_add_self_left]
+      norm_cast
+      rw [Int.gcd_comm, ← Int.isCoprime_iff_gcd_eq_one, ← ZMod.coe_int_isUnit_iff_isCoprime]
+      exact isUnit_r
     rw [Int.gcd_eq_iff] at this
     simp at this
-    exact this c hc1 hc2
-    
-
-  obtain ⟨urpt, h_urpt⟩ := this
+    exact this c hc2 hc1
+  let ⟨urpt, h_urpt⟩ := isUnit_rpt
   rw [← h_urpt, orderOf_units]
 
-  -- Show the equality by divisibility
+  -- Prove $\mathrm{ord}_{2p^t}(r + p^t) = \varphi(2p^t)$ by mutual divisibility
   apply Nat.dvd_antisymm
   · -- Direction 1: $\mathrm{ord}_{2p^t}(r + p^t) \mid \varphi(2p^t)$ by Lagrange's theorem
     rw [← ZMod.card_units_eq_totient]
