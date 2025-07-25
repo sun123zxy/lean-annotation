@@ -32,7 +32,7 @@ Our strategy is as follows:
 -/
 
 open Nat
-
+    
 theorem rpt_primitive_root (p : ℕ) (t : ℕ) (r : ℤ)
     (hp : Nat.Prime p)
     (hp_odd : Odd p)
@@ -55,17 +55,32 @@ theorem rpt_primitive_root (p : ℕ) (t : ℕ) (r : ℤ)
   rw [← h_ur, orderOf_units] at hr_prim
 
   haveI : IsUnit (r + p ^ t : ZMod (2 * p ^ t)) := by
-    norm_cast
-    rw [ZMod.isUnit_iff_coprime]
-    rw [coprime_iff_gcd_eq_one]
-    lift p to PNat using pos_of_neZero p
-    norm_cast
-    rw [← PNat.gcd_coe]
-    #check PNat.gcd
-    #check PNat.Coprime.gcd_mul
-    rw [PNat.Coprime.gcd_mul]
+    suffices h : Int.gcd (r + p ^ t) (2 * p ^ t) = 1 by
+      sorry
+    -- rw [ZMod.isUnit_iff_coprime]
+    -- rw [coprime_iff_gcd_eq_one]
+    -- lift p to PNat using pos_of_neZero p
+    -- norm_cast
+    -- rw [← PNat.gcd_coe]
+    -- #check PNat.gcd
+    -- #check PNat.Coprime.gcd_mul
+    -- rw [PNat.Coprime.gcd_mul]
     -- show that gcd(p^t, r+p^t) = 1
-
+    rw [Int.gcd_eq_iff]
+    simp
+    intro c hc1 hc2
+    replace hc2 : c ∣ p ^ t := by
+      
+      sorry
+    haveI : Int.gcd (r + p ^ t) (p ^ t) = 1 := by
+      simp
+      rw [← Int.isCoprime_iff_gcd_eq_one]
+      
+      sorry
+    rw [Int.gcd_eq_iff] at this
+    simp at this
+    exact this c hc1 hc2
+    
 
   obtain ⟨urpt, h_urpt⟩ := this
   rw [← h_urpt, orderOf_units]
